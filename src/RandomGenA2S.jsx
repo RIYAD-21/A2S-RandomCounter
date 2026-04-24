@@ -1,9 +1,6 @@
-
-
-
 import { useState } from "react";
 
-const POOL = [0,1,2,3,4,5];
+const POOL = [1,2,3,4,5,6];
 
 const s = {
   page:    { minHeight:"100vh", background:"#F0F6FB", display:"flex",
@@ -23,9 +20,9 @@ const s = {
   display: { background:"linear-gradient(135deg,#0D7CC2,#1E9FE8)",
              borderRadius:"16px", padding:"36px 16px", textAlign:"center",
              marginBottom:"20px", position:"relative", overflow:"hidden" },
-  numBase: { fontSize:"88px", fontWeight:"700", color:"#fff",
+  numBase: { fontSize:"48px", fontWeight:"700", color:"#fff",
              lineHeight:1, transition:"transform 0.1s, opacity 0.1s",
-             display:"block" },
+             display:"block", letterSpacing:"8px" },
   caption: { fontSize:"11px", color:"rgba(255,255,255,0.75)",
              letterSpacing:"3px", marginTop:"8px", textTransform:"uppercase" },
   btnMain: { width:"100%", background:"#0D7CC2", color:"#fff", border:"none",
@@ -36,43 +33,41 @@ const s = {
              border:"1.5px solid #0D7CC2", borderRadius:"12px", padding:"10px",
              fontSize:"13px", cursor:"pointer", marginBottom:"20px",
              transition:"background 0.2s" },
-  poolLbl: { fontSize:"10px", color:"#94A3B8", letterSpacing:"2px",
-             textTransform:"uppercase", marginBottom:"6px" },
-  counter: { fontSize:"11px", color:"#94A3B8", textAlign:"right",
-             marginBottom:"8px" },
-  pool:    { display:"flex", flexWrap:"wrap", gap:"6px" },
 };
 
-export default function A2SRandomPicker() {
-  const [remaining, setRemaining] = useState([...POOL]);
-  const [drawn,     setDrawn]     = useState([]);
-  const [current,   setCurrent]   = useState(null);
-  const [spinning,  setSpinning]  = useState(false);
+export default function DiceSequenceGenerator() {
+  const [sequence, setSequence] = useState(null);
+  const [spinning, setSpinning] = useState(false);
 
-  const draw = () => {
-    if (!remaining.length || spinning) return;
-    setSpinning(true);
-    const chosen = remaining[Math.floor(Math.random() * remaining.length)];
-    let ticks = 0;
-    const iv = setInterval(() => {
-      setCurrent(remaining[Math.floor(Math.random() * remaining.length)]);
-      if (++ticks >= 20) {
-        clearInterval(iv);
-        setCurrent(chosen);
-        setRemaining(r => r.filter(n => n !== chosen));
-        setDrawn(d => [...d, chosen]);
-        setSpinning(false);
-      }
-    }, 60);
+  // 🔥 Fisher-Yates shuffle
+  const generateSequence = () => {
+    const arr = [...POOL];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr.join("");
   };
 
-  const reset = () => { setRemaining([...POOL]); setDrawn([]); setCurrent(null); };
+  const draw = () => {
+    if (spinning) return;
+    setSpinning(true);
 
-  const statusText = !drawn.length
-    ? "Prêt pour le tirage"
-    : !remaining.length
-    ? "Tous les numéros tirés !"
-    : "Numéro tiré avec succès";
+    let ticks = 0;
+    const iv = setInterval(() => {
+      setSequence(generateSequence()); // fake spinning effect
+
+      if (++ticks >= 20) {
+        clearInterval(iv);
+        setSequence(generateSequence()); // final result
+        setSpinning(false);
+      }
+    }, 80);
+  };
+
+  const reset = () => {
+    setSequence(null);
+  };
 
   return (
     <div style={s.page}>
@@ -81,66 +76,42 @@ export default function A2SRandomPicker() {
         <div style={s.header}>
           <div style={s.badge}>A2S</div>
           <div>
-            <h1 style={s.h1}>TIRAGE AU SORT</h1>
-            <p style={s.sub}>A2S Junior Entreprise · INPT</p>
+            <h1 style={s.h1}>SEQUENCE GENERATOR</h1>
+            <p style={s.sub}>Generate 6 random numbers</p>
           </div>
         </div>
 
         <div style={s.display}>
           <span style={{
             ...s.numBase,
-            transform: spinning ? "scale(1.12)" : "scale(1)",
-            opacity:   spinning ? 0.45 : 1,
+            transform: spinning ? "scale(1.1)" : "scale(1)",
+            opacity: spinning ? 0.5 : 1,
           }}>
-            {current ?? "—"}
+            {sequence ?? "------"}
           </span>
-          <p style={s.caption}>{statusText}</p>
+          <p style={s.caption}>
+            {spinning ? "Génération..." : "Clique pour générer"}
+          </p>
         </div>
 
         <button
           style={{
             ...s.btnMain,
-            background: (!remaining.length || spinning) ? "#90C4E8" : "#0D7CC2",
-            cursor:     (!remaining.length || spinning) ? "not-allowed" : "pointer",
+            background: spinning ? "#90C4E8" : "#0D7CC2",
+            cursor: spinning ? "not-allowed" : "pointer",
           }}
-          onMouseEnter={e => { if (remaining.length && !spinning) e.target.style.background = "#0B6AAD"; }}
-          onMouseLeave={e => { if (remaining.length && !spinning) e.target.style.background = "#0D7CC2"; }}
           onClick={draw}
-          disabled={!remaining.length || spinning}
+          disabled={spinning}
         >
-          TIRER UN NUMÉRO
+          GENERATE SEQUENCE
         </button>
 
         <button
           style={s.btnReset}
-          onMouseEnter={e => e.target.style.background = "#E6F1FB"}
-          onMouseLeave={e => e.target.style.background = "transparent"}
           onClick={reset}
         >
-          Réinitialiser le tirage
+          Reset
         </button>
-
-        <p style={s.poolLbl}>Numéros disponibles</p>
-        <p style={s.counter}>{remaining.length} / {POOL.length} restants</p>
-        <div style={s.pool}>
-          {POOL.map(n => {
-            const isLast    = n === drawn.at(-1);
-            const isDrawn   = drawn.includes(n);
-            const tagStyle  = {
-              padding:"4px 10px", borderRadius:"20px", fontSize:"13px",
-              fontWeight:"500", transition:"all 0.2s",
-              background: isLast  ? "#0D7CC2"
-                        : isDrawn ? "#B5D4F4"
-                        : "#E6F1FB",
-              color:      isLast  ? "#fff"
-                        : isDrawn ? "#185FA5"
-                        : "#0D7CC2",
-              textDecoration: (isDrawn && !isLast) ? "line-through" : "none",
-              opacity:        (isDrawn && !isLast) ? 0.55 : 1,
-            };
-            return <span key={n} style={tagStyle}>{n}</span>;
-          })}
-        </div>
 
       </div>
     </div>
